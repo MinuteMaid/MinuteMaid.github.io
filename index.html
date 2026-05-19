@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>USPS Pay Calculator</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#004B87" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Pay Calc" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ══════════════════════════════════════════
+     DARK THEME (default)
+  ══════════════════════════════════════════ */
+  :root {
+    --bg:           #020817;
+    --bg-card:      #0f172a;
+    --bg-input:     #020817;
+    --bg-row:       #0a1628;
+    --bg-total-row: #111827;
+    --bg-ns-sel:    #1e1040;
+    --border:       #1e293b;
+    --border-2:     #1e3a5f;
+    --border-3:     #2d3748;
+    --text-1:       #f8fafc;
+    --text-2:       #94a3b8;
+    --text-3:       #64748b;
+    --text-4:       #475569;
+    --text-5:       #334155;
+    --text-6:       #1e293b;
+    --usps-blue:    #005b9f;
+    --week-title:   #cbd5e1;
+    --c-reg:        #2ec4b6;
+    --c-ot:         #f4a261;
+    --c-pen:        #e63946;
+    --c-gold:       #fbbf24;
+    --c-ns:         #a78bfa;
+    --c-ns-border:  #7c3aed;
+    --c-reg-in:     #020817;
+    --c-ot-in:      #120d05;
+    --c-pen-in:     #1a0a0c;
+    --c-sun-in:     #120d02;
+    --c-ns-in:      #120d05;
+    --c-ns-pen-in:  #1a0a0c;
+    --grand-inactive: #1e3a5f;
+    --sun-label:    #a16207;
+    --card-shadow:  none;
+    --tsw-active-bg:    #1e293b;
+    --tsw-active-color: #f8fafc;
+    --tsw-idle-color:   #334155;
+  }
+
+  /* ══════════════════════════════════════════
+     LIGHT THEME (USPS)
+  ══════════════════════════════════════════ */
+  body.light {
+    --bg:           #dde6f0;
+    --bg-card:      #ffffff;
+    --bg-input:     #f8fafc;
+    --bg-row:       #f8fafc;
+    --bg-total-row: #eef2f7;
+    --bg-ns-sel:    #ede9fe;
+    --border:       #c5d4e3;
+    --border-2:     #93b8d8;
+    --border-3:     #b8cfe0;
+    --text-1:       #002a6b;
+    --text-2:       #475569;
+    --text-3:       #64748b;
+    --text-4:       #64748b;
+    --text-5:       #94a3b8;
+    --text-6:       #cbd5e1;
+    --usps-blue:    #004B87;
+    --week-title:   #002a6b;
+    --c-reg:        #0369a1;
+    --c-ot:         #c2610c;
+    --c-pen:        #cc1a12;
+    --c-gold:       #a16207;
+    --c-ns:         #7c3aed;
+    --c-ns-border:  #7c3aed;
+    --c-reg-in:     #f0f9ff;
+    --c-ot-in:      #fff7ed;
+    --c-pen-in:     #fff1f2;
+    --c-sun-in:     #fffbeb;
+    --c-ns-in:      #fff7ed;
+    --c-ns-pen-in:  #fff1f2;
+    --grand-inactive: #c5d4e3;
+    --sun-label:    #92400e;
+    --card-shadow:  0 1px 3px rgba(0,48,135,0.07), 0 1px 2px rgba(0,48,135,0.04);
+    --tsw-active-bg:    #004B87;
+    --tsw-active-color: #ffffff;
+    --tsw-idle-color:   #94a3b8;
+  }
+
+  /* ══════════════════════════════════════════
+     BASE
+  ══════════════════════════════════════════ */
+  body { background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 28px 14px 60px; font-family: sans-serif; transition: background 0.3s; }
+
+  /* ── PILL SWITCHES (shared style) ── */
+  .pill-switch { display: flex; gap: 4px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 3px; box-shadow: var(--card-shadow); }
+  .psw { font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 2px; font-weight: 700; padding: 5px 14px; border-radius: 16px; border: none; cursor: pointer; color: var(--tsw-idle-color); background: transparent; transition: all 0.2s; }
+  .psw.active { background: var(--tsw-active-bg); color: var(--tsw-active-color); }
+
+  /* ── HEADER ── */
+  .usps-label { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 4px; }
+  .usps-line  { width: 28px; height: 3px; background: var(--usps-blue); flex-shrink: 0; transition: background 0.3s; }
+  .usps-text  { font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 3px; color: var(--usps-blue); font-weight: 700; white-space: nowrap; transition: color 0.3s; }
+  h1          { font-family: 'Bebas Neue', sans-serif; font-size: clamp(32px, 8vw, 52px); color: var(--text-1); letter-spacing: 3px; line-height: 1; text-align: center; transition: color 0.3s; }
+  .rate-labels { display: flex; justify-content: center; gap: 12px; margin-top: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .rate-badge  { font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 1px; padding-bottom: 1px; }
+  .rb-reg  { color: var(--c-reg);  border-bottom: 1px solid var(--c-reg);  transition: color 0.3s, border-color 0.3s; }
+  .rb-ot   { color: var(--c-ot);   border-bottom: 1px solid var(--c-ot);   transition: color 0.3s, border-color 0.3s; }
+  .rb-pen  { color: var(--c-pen);  border-bottom: 1px solid var(--c-pen);  transition: color 0.3s, border-color 0.3s; }
+  .rb-gold { color: var(--c-gold); border-bottom: 1px solid var(--c-gold); transition: color 0.3s, border-color 0.3s; }
+  .rb-ns   { color: var(--c-ns);   border-bottom: 1px solid var(--c-ns);   transition: color 0.3s, border-color 0.3s; }
+
+  /* ── CARD ── */
+  .card { width: 100%; max-width: 540px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 14px; box-shadow: var(--card-shadow); transition: background 0.3s, border-color 0.3s, box-shadow 0.3s; }
+  .mono     { font-family: 'Courier Prime', monospace; }
+  .label-sm { font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 2px; color: var(--text-3); font-weight: 700; transition: color 0.3s; }
+
+  /* ── RATE INPUT ── */
+  .rate-top    { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .rate-wrap   { position: relative; }
+  .rate-prefix { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--c-reg); font-family: 'Courier Prime', monospace; font-size: 20px; font-weight: 700; pointer-events: none; transition: color 0.3s; }
+  #rateInput   { width: 100%; background: var(--bg-input); border: 2px solid var(--border-2); border-radius: 4px; color: var(--c-reg); font-size: 22px; font-family: 'Courier Prime', monospace; font-weight: 700; padding: 10px 14px 10px 34px; outline: none; transition: border-color 0.2s, color 0.3s, background 0.3s; }
+  #rateInput:focus { border-color: var(--c-reg); }
+  #rateInput::placeholder { color: var(--text-5); }
+  .hourly-display { font-family: 'Courier Prime', monospace; font-size: 11px; color: var(--text-3); margin-top: 7px; display: none; }
+  .hourly-display span { color: var(--c-reg); font-weight: 700; }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  /* ── NS PICKER ── */
+  .ns-picker { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
+  .ns-btn    { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 7px 2px; border-radius: 4px; cursor: pointer; border: 2px solid var(--border); background: var(--bg-input); transition: all 0.15s; user-select: none; }
+  .ns-btn .nb-day { font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 1px; font-weight: 700; color: var(--text-5); transition: color 0.15s; }
+  .ns-btn .nb-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; margin-top: 4px; transition: background 0.15s; }
+  .ns-btn.selected { border-color: var(--c-ns-border); background: var(--bg-ns-sel); }
+  .ns-btn.selected .nb-day { color: var(--c-ns); }
+  .ns-btn.selected .nb-dot { background: var(--c-ns-border); }
+  .ns-btn.is-sun .nb-day   { color: var(--c-gold); opacity: 0.6; }
+  .ns-btn.is-sun.selected .nb-day { color: var(--c-ns); opacity: 1; }
+  .ns-hint { font-family: 'Courier Prime', monospace; font-size: 9px; color: var(--text-5); margin-top: 8px; letter-spacing: 1px; transition: color 0.3s; }
+
+  /* ── TOGGLE SWITCH ── */
+  .pen-excl-row  { display: flex; justify-content: space-between; align-items: center; }
+  .toggle-switch { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track  { position: absolute; cursor: pointer; inset: 0; background: var(--bg-input); border: 2px solid var(--border); border-radius: 13px; transition: background 0.2s, border-color 0.2s; }
+  .toggle-track::before { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; left: 3px; top: 3px; background: var(--text-5); transition: transform 0.2s, background 0.2s; }
+  .toggle-switch input:checked + .toggle-track              { background: var(--bg-card); border-color: var(--c-reg); }
+  .toggle-switch input:checked + .toggle-track::before      { transform: translateX(20px); background: var(--c-reg); }
+
+  /* ── WEEK SECTION ── */
+  .week-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .week-title  { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--week-title); transition: color 0.3s; }
+  .week-right  { display: flex; align-items: baseline; gap: 10px; }
+  .week-hrs-display { font-family: 'Courier Prime', monospace; font-size: 11px; color: var(--text-4); }
+  .week-hrs-display span { color: var(--text-2); font-weight: 700; margin-left: 4px; }
+
+  /* ── CLEAR BUTTON ── */
+  .clr-btn { background: none; border: 1px solid var(--border); border-radius: 3px; color: var(--text-5); font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 1.5px; font-weight: 700; padding: 3px 8px; cursor: pointer; transition: all 0.15s; }
+  .clr-btn:active { border-color: var(--c-pen); color: var(--c-pen); }
+
+  /* ── DAY GRID ── */
+  .day-grid  { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 12px; }
+  .day-col   { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .day-name-wrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .day-name  { font-family: 'Courier Prime', monospace; font-size: 9px; letter-spacing: 1px; color: var(--text-3); font-weight: 700; transition: color 0.3s; }
+  .day-name.sun-label { color: var(--c-gold); opacity: 0.7; }
+  .day-name.ns-label  { color: var(--c-ns-border); opacity: 0.6; font-size: 8px; }
+  .day-input { width: 100%; aspect-ratio: 1; text-align: center; background: var(--bg-input); border: 2px solid var(--border); border-radius: 4px; color: var(--text-5); font-size: clamp(13px, 3.2vw, 18px); font-family: 'Courier Prime', monospace; font-weight: 700; outline: none; transition: border-color 0.15s, color 0.15s, background 0.15s; padding: 0; min-width: 0; }
+  .day-bar   { height: 3px; width: 100%; border-radius: 2px; background: var(--border); transition: background 0.15s; }
+
+  /* ── LEAVE HOURS ── */
+  .leave-row  { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--bg-row); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 12px; transition: background 0.3s, border-color 0.3s; }
+  .leave-input { width: 80px; background: var(--bg-input); border: 2px solid var(--border); border-radius: 4px; color: var(--text-5); font-size: 15px; font-family: 'Courier Prime', monospace; font-weight: 700; padding: 5px 8px; text-align: right; outline: none; transition: border-color 0.15s, color 0.15s; }
+  .leave-input:focus { border-color: var(--c-reg); }
+  .leave-input.has-val { border-color: var(--c-reg); color: var(--c-reg); }
+  .leave-hint { font-family: 'Courier Prime', monospace; font-size: 10px; color: var(--text-4); letter-spacing: 1px; }
+
+  /* ── BREAKDOWN TABLE ── */
+  .breakdown { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; transition: border-color 0.3s; }
+  .brow      { display: grid; grid-template-columns: 100px 1fr auto; border-bottom: 1px solid var(--border); transition: border-color 0.3s; }
+  .brow:last-child { border-bottom: none; }
+  .brow > div { padding: 6px 10px; font-family: 'Courier Prime', monospace; font-size: 11px; background: var(--bg-row); display: flex; align-items: center; transition: background 0.3s; }
+  .brow > div:nth-child(1) { font-size: 9px; letter-spacing: 1.5px; font-weight: 700; color: var(--text-3); }
+  .brow > div:nth-child(2) { color: var(--text-4); }
+  .brow > div:nth-child(3) { font-weight: 700; justify-content: flex-end; }
+  .brow.total-row > div    { background: var(--bg-total-row); border-top: 1px solid var(--border-3); }
+  .brow.total-row > div:nth-child(1) { font-size: 10px; letter-spacing: 2px; color: var(--text-2); }
+  .brow.total-row > div:nth-child(3) { font-size: 15px; color: var(--text-1); }
+
+  /* ── NOTICES ── */
+  .notice-wrap { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .notice      { display: none; padding: 6px 10px; border-radius: 4px; font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 0.3px; }
+  .notice.n-fifth { background: var(--c-pen-in);  border: 1px solid var(--c-pen);  color: var(--c-pen);  opacity: 0.85; }
+  .notice.n-sun   { background: var(--c-sun-in);  border: 1px solid var(--c-gold); color: var(--c-gold); opacity: 0.9; }
+
+  /* ── GRAND TOTAL ── */
+  .grand-total { width: 100%; max-width: 540px; background: var(--bg-card); border: 1px solid var(--border-2); border-radius: 6px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; box-shadow: var(--card-shadow); transition: all 0.3s; }
+  .grand-label { font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 3px; color: var(--text-3); font-weight: 700; }
+  .grand-sub   { font-family: 'Courier Prime', monospace; font-size: 10px; color: var(--text-5); margin-top: 3px; }
+  #grandTotal  { font-family: 'Bebas Neue', sans-serif; font-size: clamp(30px, 8vw, 48px); color: var(--grand-inactive); letter-spacing: 2px; transition: color 0.3s; }
+
+  /* ── FILE ACTION BUTTONS ── */
+  .file-actions { width: 100%; max-width: 540px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .file-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-4); font-family: 'Courier Prime', monospace; font-size: 11px; letter-spacing: 2px; font-weight: 700; padding: 13px 8px; cursor: pointer; transition: all 0.2s; text-align: center; display: block; width: 100%; box-shadow: var(--card-shadow); }
+  .file-btn:active { background: var(--bg-row); }
+  .file-btn.save-btn.done   { border-color: var(--c-reg); color: var(--c-reg); background: var(--c-reg-in); }
+  .file-btn.load-btn.loaded { border-color: var(--c-ns);  color: var(--c-ns);  background: var(--bg-ns-sel); }
+
+  /* ── SAVE TOAST ── */
+  .save-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--bg-card); border: 1px solid var(--border-2); border-radius: 4px; padding: 8px 18px; font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 2px; color: var(--c-reg); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; z-index: 100; box-shadow: var(--card-shadow); }
+  .save-toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="usps-label">
+  <div class="usps-line"></div>
+  <span class="usps-text">UNITED STATES POSTAL SERVICE</span>
+  <div class="usps-line"></div>
+</div>
+<h1>PAY CALCULATOR</h1>
+<div class="rate-labels">
+  <span class="rate-badge rb-reg">REG ×1.0</span>
+  <span class="rate-badge rb-ot">OT ×1.5</span>
+  <span class="rate-badge rb-pen">PEN ×2.0</span>
+  <span class="rate-badge rb-gold">SUN +25%</span>
+  <span class="rate-badge rb-ns">NS DAY</span>
+</div>
+
+<!-- THEME SWITCH -->
+<div class="pill-switch" style="margin-bottom:20px;">
+  <button class="psw active" data-theme="dark">🌙 DARK</button>
+  <button class="psw"        data-theme="light">☀ LIGHT</button>
+</div>
+
+<!-- RATE INPUT -->
+<div class="card">
+  <div class="rate-top">
+    <div class="label-sm" id="rateLabel">HOURLY RATE</div>
+    <div class="pill-switch">
+      <button class="psw active" data-mode="hourly">$/HR</button>
+      <button class="psw"        data-mode="annual">ANNUAL</button>
+    </div>
+  </div>
+  <div class="rate-wrap">
+    <span class="rate-prefix">$</span>
+    <input type="number" id="rateInput" min="0" step="0.01" placeholder="0.00" />
+  </div>
+  <div class="hourly-display" id="hourlyDisplay">≈ <span id="computedHourly">$0.00</span> / HR &nbsp;(÷ 2080)</div>
+</div>
+
+<!-- NS DAY PICKER -->
+<div class="card">
+  <div class="label-sm">NON-SCHEDULED DAYS
+    <span style="font-size:9px; color:var(--text-6); letter-spacing:1px; margin-left:6px;">SELECT UP TO 2</span>
+  </div>
+  <div class="ns-picker" id="nsPicker"></div>
+  <div class="ns-hint" id="nsHint">No NS days selected</div>
+</div>
+
+<!-- PENALTY EXCLUSION TOGGLE -->
+<div class="card">
+  <div class="pen-excl-row">
+    <div class="label-sm">PENALTY OVERTIME EXCLUSION</div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="penExclToggle" />
+      <div class="toggle-track"></div>
+    </label>
+  </div>
+</div>
+
+<!-- WEEK 1 -->
+<div class="card">
+  <div class="week-header">
+    <div class="week-title">WEEK 1</div>
+    <div class="week-right">
+      <div class="week-hrs-display">HOURS <span id="w1-hrs">0.00</span></div>
+      <button class="clr-btn" id="clr0">CLEAR</button>
+    </div>
+  </div>
+  <div class="day-grid" id="grid1"></div>
+  <div class="leave-row">
+    <span class="label-sm">LEAVE HOURS</span>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="leave-hint" id="leave0-pay">$0.00</span>
+      <input class="leave-input" type="number" min="0" step="0.25" id="leave0" placeholder="0" />
+    </div>
+  </div>
+  <div class="breakdown" id="bd1"></div>
+  <div class="notice-wrap">
+    <div class="notice n-fifth" id="notice1-fifth">⚠ 5th OT day — those OT hours bumped to penalty ×2.0</div>
+    <div class="notice n-sun"   id="notice1-sun">★ Sunday premium applied (+25% on first 8 Sunday hours)</div>
+  </div>
+</div>
+
+<!-- WEEK 2 -->
+<div class="card">
+  <div class="week-header">
+    <div class="week-title">WEEK 2</div>
+    <div class="week-right">
+      <div class="week-hrs-display">HOURS <span id="w2-hrs">0.00</span></div>
+      <button class="clr-btn" id="clr1">CLEAR</button>
+    </div>
+  </div>
+  <div class="day-grid" id="grid2"></div>
+  <div class="leave-row">
+    <span class="label-sm">LEAVE HOURS</span>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="leave-hint" id="leave1-pay">$0.00</span>
+      <input class="leave-input" type="number" min="0" step="0.25" id="leave1" placeholder="0" />
+    </div>
+  </div>
+  <div class="breakdown" id="bd2"></div>
+  <div class="notice-wrap">
+    <div class="notice n-fifth" id="notice2-fifth">⚠ 5th OT day — those OT hours bumped to penalty ×2.0</div>
+    <div class="notice n-sun"   id="notice2-sun">★ Sunday premium applied (+25% on first 8 Sunday hours)</div>
+  </div>
+</div>
+
+<!-- GRAND TOTAL -->
+<div class="grand-total">
+  <div>
+    <div class="grand-label">2-WEEK GROSS PAY</div>
+    <div class="grand-sub">before taxes &amp; deductions</div>
+  </div>
+  <div id="grandTotal">$0.00</div>
+</div>
+
+<!-- SAVE / LOAD FILE -->
+<div class="file-actions">
+  <button class="file-btn save-btn" id="saveFileBtn">↓ &nbsp;SAVE TO FILE</button>
+  <button class="file-btn load-btn" id="loadFileBtn">↑ &nbsp;LOAD FROM FILE</button>
+</div>
+<input type="file" id="fileInput" accept=".json" style="display:none;" />
+
+<!-- SAVE TOAST -->
+<div class="save-toast" id="saveToast">SETTINGS SAVED</div>
+
+<script>
+  const DAYS    = ["SAT","SUN","MON","TUE","WED","THU","FRI"];
+  const SUN_IDX = 1;
+  const MAX_NS  = 2;
+
+  let nsDaySet     = new Set();
+  let penExclusion = false;
+  let currentTheme = "dark";
+  let rateMode     = "hourly"; // "hourly" | "annual"
+
+  // ── RATE HELPERS ─────────────────────────────────────────────
+  function getHourlyRate() {
+    const val = parseFloat(document.getElementById("rateInput").value) || 0;
+    return rateMode === "annual" ? val / 2080 : val;
+  }
+
+  function updateRateDisplay() {
+    const rateLabel   = document.getElementById("rateLabel");
+    const rateInput   = document.getElementById("rateInput");
+    const hourlyDisp  = document.getElementById("hourlyDisplay");
+    const computed    = document.getElementById("computedHourly");
+
+    if (rateMode === "annual") {
+      rateLabel.textContent = "ANNUAL SALARY";
+      rateInput.step        = "1";
+      rateInput.placeholder = "0";
+      hourlyDisp.style.display = "block";
+      const hr = getHourlyRate();
+      computed.textContent = "$" + hr.toFixed(2);
+    } else {
+      rateLabel.textContent = "HOURLY RATE";
+      rateInput.step        = "0.01";
+      rateInput.placeholder = "0.00";
+      hourlyDisp.style.display = "none";
+    }
+  }
+
+  // Rate mode switch
+  document.querySelectorAll("[data-mode]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      rateMode = btn.dataset.mode;
+      document.querySelectorAll("[data-mode]").forEach(b =>
+        b.classList.toggle("active", b.dataset.mode === rateMode));
+      updateRateDisplay();
+      recalc();
+      saveSettings();
+    });
+  });
+
+  document.getElementById("rateInput").addEventListener("input", () => {
+    updateRateDisplay();
+    recalc();
+    saveSettings();
+  });
+
+  // ── THEME ─────────────────────────────────────────────────────
+  const INPUT_COLORS = {
+    dark: {
+      empty:  { border:"#1e293b", color:"#334155", bg:"#020817" },
+      reg:    { border:"#2ec4b6", color:"#2ec4b6", bg:"#020817" },
+      ot:     { border:"#f4a261", color:"#f4a261", bg:"#120d05" },
+      pen:    { border:"#e63946", color:"#e63946", bg:"#1a0a0c" },
+      sun:    { border:"#d97706", color:"#fbbf24", bg:"#120d02" },
+      nsReg:  { border:"#f4a261", color:"#f4a261", bg:"#120d05" },
+      nsSun:  { border:"#d97706", color:"#fbbf24", bg:"#120d02" },
+      nsPen:  { border:"#e63946", color:"#e63946", bg:"#1a0a0c" },
+    },
+    light: {
+      empty:  { border:"#c5d4e3", color:"#94a3b8", bg:"#f8fafc" },
+      reg:    { border:"#0369a1", color:"#0369a1", bg:"#f0f9ff" },
+      ot:     { border:"#c2610c", color:"#c2610c", bg:"#fff7ed" },
+      pen:    { border:"#cc1a12", color:"#cc1a12", bg:"#fff1f2" },
+      sun:    { border:"#b45309", color:"#a16207", bg:"#fffbeb" },
+      nsReg:  { border:"#c2610c", color:"#c2610c", bg:"#fff7ed" },
+      nsSun:  { border:"#b45309", color:"#a16207", bg:"#fffbeb" },
+      nsPen:  { border:"#cc1a12", color:"#cc1a12", bg:"#fff1f2" },
+    },
+  };
+
+  function getDayColor(h, di, fifthDaySet) {
+    const c = INPUT_COLORS[currentTheme];
+    const isNS = nsDaySet.has(di); const isSun = di === SUN_IDX;
+    if (h === 0) return c.empty;
+    if (isNS) { if (h > 8) return c.nsPen; if (isSun) return c.nsSun; return c.nsReg; }
+    if (h > 10 || fifthDaySet.has(di)) return c.pen;
+    if (h > 8)  return c.ot;
+    if (isSun)  return c.sun;
+    return c.reg;
+  }
+
+  function applyTheme(theme) {
+    currentTheme = theme;
+    document.body.classList.toggle("light", theme === "light");
+    document.querySelectorAll("[data-theme]").forEach(btn =>
+      btn.classList.toggle("active", btn.dataset.theme === theme));
+    recalc();
+  }
+
+  document.querySelectorAll("[data-theme]").forEach(btn => {
+    btn.addEventListener("click", () => { applyTheme(btn.dataset.theme); saveSettings(); });
+  });
+
+  // ── NS PICKER ────────────────────────────────────────────────
+  const nsPicker = document.getElementById("nsPicker");
+  const nsBtns   = [];
+  DAYS.forEach((d, i) => {
+    const btn = document.createElement("div");
+    btn.className = "ns-btn" + (i === SUN_IDX ? " is-sun" : "");
+    btn.innerHTML = `<div class="nb-day">${d}</div><div class="nb-dot"></div>`;
+    btn.addEventListener("click", () => toggleNS(i));
+    nsPicker.appendChild(btn);
+    nsBtns.push(btn);
+  });
+
+  function toggleNS(idx) {
+    if (nsDaySet.has(idx)) { nsDaySet.delete(idx); nsBtns[idx].classList.remove("selected"); }
+    else { if (nsDaySet.size >= MAX_NS) return; nsDaySet.add(idx); nsBtns[idx].classList.add("selected"); }
+    updateNsHint(); recalc(); saveSettings();
+  }
+
+  function updateNsHint() {
+    const hint = document.getElementById("nsHint");
+    if (nsDaySet.size === 0) { hint.textContent = "No NS days selected"; hint.style.color = ""; }
+    else { hint.textContent = "NS days: " + [...nsDaySet].sort((a,b)=>a-b).map(i=>DAYS[i]).join(" + "); hint.style.color = "var(--c-ns)"; }
+  }
+
+  // ── WEEK DEFINITIONS ─────────────────────────────────────────
+  const weekDefs = [
+    { gridId:"grid1", bdId:"bd1", hrsId:"w1-hrs", notFifth:"notice1-fifth", notSun:"notice1-sun", leaveId:"leave0", leavePayId:"leave0-pay", inputs:[] },
+    { gridId:"grid2", bdId:"bd2", hrsId:"w2-hrs", notFifth:"notice2-fifth", notSun:"notice2-sun", leaveId:"leave1", leavePayId:"leave1-pay", inputs:[] },
+  ];
+
+  weekDefs.forEach((wk, wi) => {
+    const grid = document.getElementById(wk.gridId);
+    DAYS.forEach((day, di) => {
+      const isSun = di === SUN_IDX;
+      const col = document.createElement("div");
+      col.className = "day-col";
+      col.innerHTML = `
+        <div class="day-name-wrap">
+          <div class="day-name${isSun ? " sun-label" : ""}">${day}${isSun ? "★" : ""}</div>
+          <div class="day-name ns-label" id="nslbl${wi}_${di}" style="display:none;">NS</div>
+        </div>
+        <input class="day-input" type="number" min="0" max="24" step="0.25" id="inp${wi}_${di}" />
+        <div class="day-bar" id="bar${wi}_${di}"></div>`;
+      grid.appendChild(col);
+      const inp = col.querySelector("input");
+      wk.inputs.push(inp);
+      inp.addEventListener("input", () => { recalc(); saveSettings(); });
+    });
+    // Leave hours listener
+    document.getElementById(wk.leaveId).addEventListener("input", () => { recalc(); saveSettings(); });
+  });
+
+  // ── OTHER LISTENERS ───────────────────────────────────────────
+  document.getElementById("penExclToggle").addEventListener("change", e => {
+    penExclusion = e.target.checked; recalc(); saveSettings();
+  });
+  weekDefs.forEach((wk, wi) => {
+    document.getElementById(`clr${wi}`).addEventListener("click", () => {
+      wk.inputs.forEach(inp => inp.value = "");
+      document.getElementById(wk.leaveId).value = "";
+      recalc(); saveSettings();
+    });
+  });
+
+  // ── SAVE / LOAD / TOAST ───────────────────────────────────────
+  let toastTimer;
+  function showToast() {
+    const t = document.getElementById("saveToast");
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1500);
+  }
+
+  function saveSettings() {
+    try {
+      localStorage.setItem("usps_calc", JSON.stringify({
+        rate:     document.getElementById("rateInput").value,
+        rateMode, penExclusion, theme: currentTheme,
+        w1Hours:  weekDefs[0].inputs.map(inp => inp.value),
+        w2Hours:  weekDefs[1].inputs.map(inp => inp.value),
+        leave0:   document.getElementById("leave0").value,
+        leave1:   document.getElementById("leave1").value,
+      }));
+      showToast();
+    } catch(e) {}
+  }
+
+  function loadSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem("usps_calc") || "{}");
+      if (s.rate) document.getElementById("rateInput").value = s.rate;
+      if (s.rateMode) {
+        rateMode = s.rateMode;
+        document.querySelectorAll("[data-mode]").forEach(b =>
+          b.classList.toggle("active", b.dataset.mode === rateMode));
+        updateRateDisplay();
+      }
+      if (Array.isArray(s.nsDays)) {
+        s.nsDays.forEach(i => { nsDaySet.add(i); if (nsBtns[i]) nsBtns[i].classList.add("selected"); });
+        updateNsHint();
+      }
+      if (s.penExclusion) { penExclusion = true; document.getElementById("penExclToggle").checked = true; }
+      if (s.theme) applyTheme(s.theme);
+      if (Array.isArray(s.w1Hours)) s.w1Hours.forEach((v, i) => { if (weekDefs[0].inputs[i]) weekDefs[0].inputs[i].value = v; });
+      if (Array.isArray(s.w2Hours)) s.w2Hours.forEach((v, i) => { if (weekDefs[1].inputs[i]) weekDefs[1].inputs[i].value = v; });
+      if (s.leave0) document.getElementById("leave0").value = s.leave0;
+      if (s.leave1) document.getElementById("leave1").value = s.leave1;
+    } catch(e) {}
+  }
+
+  // ── SAVE / LOAD FILE ─────────────────────────────────────────
+  document.getElementById("saveFileBtn").addEventListener("click", () => {
+    const data = {
+      version: 1, savedAt: new Date().toISOString(),
+      rate:     document.getElementById("rateInput").value,
+      rateMode, penExclusion, theme: currentTheme,
+      nsDays:   [...nsDaySet],
+      w1Hours:  weekDefs[0].inputs.map(inp => inp.value),
+      w2Hours:  weekDefs[1].inputs.map(inp => inp.value),
+      leave0:   document.getElementById("leave0").value,
+      leave1:   document.getElementById("leave1").value,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url; a.download = `usps-pay-${new Date().toISOString().slice(0,10)}.json`; a.click();
+    URL.revokeObjectURL(url);
+    const btn = document.getElementById("saveFileBtn");
+    btn.textContent = "✓  SAVED"; btn.classList.add("done");
+    setTimeout(() => { btn.innerHTML = "↓ &nbsp;SAVE TO FILE"; btn.classList.remove("done"); }, 2000);
+  });
+
+  document.getElementById("loadFileBtn").addEventListener("click", () =>
+    document.getElementById("fileInput").click());
+
+  document.getElementById("fileInput").addEventListener("change", e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (d.rate !== undefined) document.getElementById("rateInput").value = d.rate;
+        if (d.rateMode) {
+          rateMode = d.rateMode;
+          document.querySelectorAll("[data-mode]").forEach(b =>
+            b.classList.toggle("active", b.dataset.mode === rateMode));
+          updateRateDisplay();
+        }
+        nsDaySet.clear(); nsBtns.forEach(b => b.classList.remove("selected"));
+        if (Array.isArray(d.nsDays)) {
+          d.nsDays.forEach(i => { nsDaySet.add(i); if (nsBtns[i]) nsBtns[i].classList.add("selected"); });
+        }
+        updateNsHint();
+        penExclusion = d.penExclusion || false;
+        document.getElementById("penExclToggle").checked = penExclusion;
+        if (d.theme) applyTheme(d.theme);
+        if (Array.isArray(d.w1Hours)) d.w1Hours.forEach((v,i) => { if (weekDefs[0].inputs[i]) weekDefs[0].inputs[i].value = v; });
+        if (Array.isArray(d.w2Hours)) d.w2Hours.forEach((v,i) => { if (weekDefs[1].inputs[i]) weekDefs[1].inputs[i].value = v; });
+        if (d.leave0) document.getElementById("leave0").value = d.leave0;
+        if (d.leave1) document.getElementById("leave1").value = d.leave1;
+        recalc(); saveSettings();
+        const btn = document.getElementById("loadFileBtn");
+        btn.textContent = "✓  LOADED"; btn.classList.add("loaded");
+        setTimeout(() => { btn.innerHTML = "↑ &nbsp;LOAD FROM FILE"; btn.classList.remove("loaded"); }, 2000);
+      } catch(err) { alert("Couldn't read file — make sure it's a USPS Pay Calculator save."); }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  // ── CORE CALC ─────────────────────────────────────────────────
+  function calcWeek(hoursArr, leaveHours, rate) {
+    const dReg = new Array(7).fill(0);
+    const dOT  = new Array(7).fill(0);
+    const dPen = new Array(7).fill(0);
+
+    for (let i = 0; i < 7; i++) {
+      const h = hoursArr[i]; const isNS = nsDaySet.has(i);
+      if (isNS) { dOT[i] = Math.min(h, 8); dPen[i] = Math.max(0, h - 8); }
+      else      { dReg[i] = Math.min(h, 8); dOT[i] = Math.max(0, Math.min(h, 10) - 8); dPen[i] = Math.max(0, h - 10); }
+    }
+
+    // 5th OT day rule
+    const otDayIdxs  = hoursArr.map((h,i) => (!nsDaySet.has(i) && h > 8) ? i : -1).filter(i => i >= 0);
+    const fifthDaySet = new Set();
+    if (otDayIdxs.length >= 5) {
+      for (let k = 4; k < otDayIdxs.length; k++) {
+        const idx = otDayIdxs[k]; dPen[idx] += dOT[idx]; dOT[idx] = 0; fifthDaySet.add(idx);
+      }
+    }
+
+    // 40-hr rule
+    let totalReg = dReg.reduce((a,b)=>a+b,0);
+    if (totalReg > 40) {
+      let excess = totalReg - 40;
+      for (let i = 6; i >= 0 && excess > 0; i--) {
+        const bump = Math.min(dReg[i], excess); dReg[i] -= bump; dOT[i] += bump; excess -= bump;
+      }
+    }
+
+    // Sunday premium: +25% on first 8 Sunday hours
+    const sunHours   = hoursArr[SUN_IDX];
+    const sunPremPay = Math.min(sunHours, 8) * rate * 0.25;
+
+    const tReg   = dReg.reduce((a,b)=>a+b,0);
+    const tOT    = dOT.reduce((a,b)=>a+b,0);
+    const tPen   = dPen.reduce((a,b)=>a+b,0);
+    const regPay = tReg * rate;
+    const otPay  = tOT  * rate * 1.5;
+    const penPay = tPen * rate * (penExclusion ? 1.5 : 2);
+
+    // Leave hours — base rate only, don't affect OT calcs
+    const leavePay = leaveHours * rate;
+
+    // Display: move Sunday base hrs into Sun Prem row
+    const sunIsSched = !nsDaySet.has(SUN_IDX);
+    const sunRegHrs  = sunIsSched ? Math.min(sunHours, 8) : 0;
+    const sunNSHrs   = sunIsSched ? 0 : Math.min(sunHours, 8);
+    const sunDispHrs = Math.min(sunHours, 8);
+    const sunDispPay = sunRegHrs * rate + sunNSHrs * rate * 1.5 + sunPremPay;
+
+    return {
+      dReg, dOT, dPen, fifthDaySet,
+      tReg, tOT, tPen, sunHours, leaveHours,
+      regPay, otPay, penPay, sunPremPay, leavePay,
+      dispReg: tReg - sunRegHrs, dispRegPay: regPay - sunRegHrs * rate,
+      dispOT:  tOT  - sunNSHrs,  dispOTPay:  otPay  - sunNSHrs * rate * 1.5,
+      sunDispHrs, sunDispPay,
+      total: regPay + otPay + penPay + sunPremPay + leavePay,
+      totalHours: hoursArr.reduce((a,b)=>a+b,0),
+    };
+  }
+
+  // ── RENDER BREAKDOWN ─────────────────────────────────────────
+  function renderBreakdown(bdId, r) {
+    const f = n => n.toFixed(2);
+    const d = n => "$" + n.toFixed(2);
+    const penLabel = penExclusion ? "PEN (EXCL)" : "PENALTY";
+    const penCol   = penExclusion ? "var(--c-ot)" : "var(--c-pen)";
+    const sunRow   = r.sunHours > 0 ? `
+      <div class="brow">
+        <div class="label-sm" style="color:var(--sun-label);">SUN PREM</div>
+        <div class="mono" style="color:var(--text-4);">${f(r.sunDispHrs)} hrs</div>
+        <div class="mono" style="color:var(--c-gold);font-weight:700;">${d(r.sunDispPay)}</div>
+      </div>` : "";
+    const leaveRow = r.leaveHours > 0 ? `
+      <div class="brow">
+        <div class="label-sm" style="color:var(--text-3);">LEAVE</div>
+        <div class="mono" style="color:var(--text-4);">${f(r.leaveHours)} hrs</div>
+        <div class="mono" style="color:var(--c-reg);font-weight:700;">${d(r.leavePay)}</div>
+      </div>` : "";
+    document.getElementById(bdId).innerHTML = `
+      <div class="brow">
+        <div class="label-sm">REGULAR</div>
+        <div class="mono" style="color:var(--text-4);">${f(r.dispReg)} hrs</div>
+        <div class="mono" style="color:var(--c-reg);font-weight:700;">${d(r.dispRegPay)}</div>
+      </div>
+      <div class="brow">
+        <div class="label-sm">OVERTIME</div>
+        <div class="mono" style="color:var(--text-4);">${f(r.dispOT)} hrs</div>
+        <div class="mono" style="color:var(--c-ot);font-weight:700;">${d(r.dispOTPay)}</div>
+      </div>
+      <div class="brow">
+        <div class="label-sm">${penLabel}</div>
+        <div class="mono" style="color:var(--text-4);">${f(r.tPen)} hrs</div>
+        <div class="mono" style="color:${penCol};font-weight:700;">${d(r.penPay)}</div>
+      </div>
+      ${sunRow}${leaveRow}
+      <div class="brow total-row">
+        <div class="label-sm">WEEK TOTAL</div>
+        <div></div>
+        <div class="mono">${d(r.total)}</div>
+      </div>`;
+  }
+
+  // ── MAIN RECALC ───────────────────────────────────────────────
+  function recalc() {
+    const rate = getHourlyRate();
+    let grandTotal = 0; let hasData = false;
+
+    weekDefs.forEach((wk, wi) => {
+      const hoursArr   = wk.inputs.map(inp => Math.max(0, parseFloat(inp.value) || 0));
+      const leaveHours = Math.max(0, parseFloat(document.getElementById(wk.leaveId).value) || 0);
+      const r          = calcWeek(hoursArr, leaveHours, rate);
+
+      document.getElementById(wk.hrsId).textContent = r.totalHours.toFixed(2);
+
+      // Update leave pay preview
+      const leaveInp = document.getElementById(wk.leaveId);
+      const leavePay = document.getElementById(wk.leavePayId);
+      leavePay.textContent = leaveHours > 0 ? "$" + r.leavePay.toFixed(2) : "$0.00";
+      leavePay.style.color = leaveHours > 0 ? "var(--c-reg)" : "";
+      leaveInp.className   = "leave-input" + (leaveHours > 0 ? " has-val" : "");
+
+      hoursArr.forEach((h, di) => {
+        const inp   = document.getElementById(`inp${wi}_${di}`);
+        const bar   = document.getElementById(`bar${wi}_${di}`);
+        const nslbl = document.getElementById(`nslbl${wi}_${di}`);
+        const { border, color, bg } = getDayColor(h, di, r.fifthDaySet);
+        inp.style.borderColor = border; inp.style.color = color; inp.style.background = bg;
+        bar.style.background  = h > 0 ? border : "";
+        nslbl.style.display   = nsDaySet.has(di) ? "block" : "none";
+      });
+
+      renderBreakdown(wk.bdId, r);
+      document.getElementById(wk.notFifth).style.display = r.fifthDaySet.size > 0 ? "block" : "none";
+      document.getElementById(wk.notSun).style.display   = r.sunHours > 0 ? "block" : "none";
+      grandTotal += r.total;
+      if (rate > 0 && (r.totalHours > 0 || leaveHours > 0)) hasData = true;
+    });
+
+    const gt = document.getElementById("grandTotal");
+    gt.textContent = "$" + grandTotal.toFixed(2);
+    gt.style.color = hasData ? "var(--text-1)" : "";
+  }
+
+  // ── INIT ─────────────────────────────────────────────────────
+  loadSettings();
+  updateRateDisplay();
+  recalc();
+
+  // ── SERVICE WORKER ────────────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>

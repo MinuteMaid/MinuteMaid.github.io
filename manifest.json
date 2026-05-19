@@ -1,0 +1,24 @@
+{
+  "name": "USPS Pay Calculator",
+  "short_name": "Pay Calc",
+  "description": "USPS biweekly pay calculator with overtime, penalty time, NS days, Sunday premium, and leave hours.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020817",
+  "theme_color": "#004B87",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
