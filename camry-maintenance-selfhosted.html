@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Camry Maintenance Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- ============================================================
+     FIREBASE SETUP
+     Fill in your project's config below. See the setup steps
+     the person you got this file from should have sent along,
+     or console.firebase.google.com > Project settings > your app.
+     ============================================================ -->
+<script>
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBaETimt44d6FGeT51TP6T_Ed4T6et2T_w",
+    authDomain: "car-maintenance-e11c8.firebaseapp.com",
+    projectId: "car-maintenance-e11c8",
+    storageBucket: "car-maintenance-e11c8.firebasestorage.app",
+    messagingSenderId: "471937319398",
+    appId: "1:471937319398:web:2a0aa6d233daa119c09627"
+  };
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<style>
+  :root {
+    --ink: #1D2226;
+    --ink-2: #262C30;
+    --panel: #EEEAE0;
+    --panel-2: #E3DECF;
+    --line: #3A4147;
+    --line-soft: #4A5158;
+    --steel: #4C7291;
+    --steel-bright: #6F9BBD;
+    --amber: #DE9F3C;
+    --red: #C1443A;
+    --green: #5C8768;
+    --grey: #8B8D85;
+    --ink-text: #EDEAE1;
+    --ink-text-dim: #A8AEA9;
+    --paper-text: #2A2E27;
+    --paper-text-dim: #6B6A5E;
+    --radius: 3px;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--ink-text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100%;
+  }
+  h1, h2, h3, .display {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin: 0;
+  }
+  .mono { font-family: 'Space Mono', monospace; }
+
+  /* ---------- Top bar / hero ---------- */
+  header.top {
+    background: linear-gradient(180deg, #23292D, #1B2023);
+    border-bottom: 1px solid var(--line);
+    padding: 18px clamp(14px, 4vw, 32px) 16px;
+    position: sticky;
+    top: 0;
+    padding-top: calc(18px + env(safe-area-inset-top, 0px));
+    z-index: 30;
+  }
+  .top-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .title-block .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--steel-bright);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .title-block h1 { font-size: clamp(24px, 4.5vw, 34px); color: var(--ink-text); }
+  .title-block .sub { color: var(--ink-text-dim); font-size: 14px; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .title-block .sub button.link-sm {
+    background: none; border: none; color: var(--steel-bright); text-decoration: underline;
+    font-family: 'Inter', sans-serif; font-size: 13px; cursor: pointer; padding: 0;
+  }
+
+  .odo-widget {
+    background: #101314;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .odo-widget .lbl {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--grey);
+    text-transform: uppercase;
+  }
+  .odo-digits {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(22px, 5vw, 30px);
+    color: var(--amber);
+    letter-spacing: 0.06em;
+    background: transparent;
+    border: none;
+    width: 8.5ch;
+    text-align: right;
+    outline: none;
+    text-shadow: 0 0 8px rgba(222,159,60,0.45);
+  }
+  .odo-digits::placeholder { color: rgba(222,159,60,0.35); }
+  .odo-unit { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--grey); }
+
+  nav.tabs {
+    display: flex;
+    gap: 2px;
+    max-width: 1080px;
+    margin: 16px auto 0;
+  }
+  nav.tabs button {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--ink-text-dim);
+    padding: 8px 14px 10px;
+    cursor: pointer;
+  }
+  nav.tabs button.active { color: var(--ink-text); border-bottom-color: var(--amber); }
+  nav.tabs button:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--steel-bright);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Layout ---------- */
+  main { max-width: 1080px; margin: 0 auto; padding: 22px clamp(14px, 4vw, 32px) 60px; }
+  .status-strip {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .status-chip {
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line-soft);
+    background: var(--ink-2);
+    color: var(--ink-text-dim);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .status-chip b { color: var(--ink-text); font-family: 'Space Mono', monospace; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.overdue { background: var(--red); }
+  .dot.soon { background: var(--amber); }
+  .dot.ok { background: var(--green); }
+  .dot.never { background: var(--grey); }
+
+  section.category { margin-bottom: 26px; }
+  .category-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    border-left: 3px solid var(--steel);
+    padding-left: 10px;
+    margin-bottom: 10px;
+  }
+  .category-head h2 { font-size: 17px; color: var(--ink-text); }
+  .category-head .count { font-size: 12px; color: var(--ink-text-dim); font-family: 'Space Mono', monospace; }
+
+  .task-row {
+    background: var(--panel);
+    color: var(--paper-text);
+    border-bottom: 1px solid #D9D3C2;
+    display: grid;
+    grid-template-columns: 1.6fr 1.1fr 0.9fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 13px 14px;
+  }
+  .task-row:first-child { border-top: 1px solid #D9D3C2; border-top-left-radius: var(--radius); border-top-right-radius: var(--radius); }
+  .task-row:last-child { border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); }
+  .task-main .name-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .task-main .name { font-weight: 600; font-size: 14.5px; }
+  .diff {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+  }
+  .diff.Easy { background: #DCE7DD; color: #3C5B41; }
+  .diff.Moderate { background: #F0E1C4; color: #7A5A1E; }
+  .diff.Advanced { background: #EBD4D1; color: #8A3A32; }
+  .task-main .interval { font-size: 12.5px; color: var(--paper-text-dim); margin-top: 3px; }
+  .task-main .diy-note { font-size: 12px; color: var(--paper-text-dim); margin-top: 5px; line-height: 1.4; max-width: 60ch; }
+
+  .task-last { font-size: 12.5px; color: var(--paper-text-dim); }
+  .task-last b { color: var(--paper-text); font-weight: 600; }
+
+  .status-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 5px 9px;
+    border-radius: 2px;
+    text-align: center;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+  .status-pill.overdue { background: #E9D0CD; color: #8A3A32; }
+  .status-pill.soon { background: #F2E2BF; color: #7A5A1E; }
+  .status-pill.ok { background: #D9E5DB; color: #3C5B41; }
+  .status-pill.never { background: #E2DFD3; color: #6B6A5E; }
+
+  .task-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  button.btn {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    background: var(--steel);
+    color: #F4F1E7;
+    border: none;
+    border-radius: 2px;
+    padding: 7px 12px;
+    cursor: pointer;
+  }
+  button.btn:hover { background: var(--steel-bright); }
+  button.btn.ghost {
+    background: transparent;
+    border: 1px solid #C7C1AE;
+    color: var(--paper-text-dim);
+  }
+  button.btn.ghost:hover { border-color: var(--paper-text-dim); color: var(--paper-text); }
+  button.link {
+    background: none; border: none; cursor: pointer;
+    font-family: 'Inter', sans-serif; font-size: 12.5px; color: var(--steel-bright); padding: 0;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 700px) {
+    .task-row { grid-template-columns: 1fr; gap: 8px; }
+    .task-actions { flex-direction: row; align-items: center; justify-content: space-between; }
+    .task-last { display: flex; justify-content: space-between; }
+  }
+
+  /* ---------- History ---------- */
+  .history-entry {
+    background: var(--panel);
+    color: var(--paper-text);
+    border-bottom: 1px solid #D9D3C2;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .history-entry:first-child { border-top: 1px solid #D9D3C2; }
+  .history-entry .h-main { font-size: 14px; }
+  .history-entry .h-main .h-task { font-weight: 600; }
+  .history-entry .h-meta { font-size: 12px; color: var(--paper-text-dim); margin-top: 2px; }
+  .history-empty, .task-list-empty {
+    color: var(--ink-text-dim);
+    font-size: 14px;
+    padding: 30px 14px;
+    text-align: center;
+    border: 1px dashed var(--line-soft);
+    border-radius: var(--radius);
+  }
+
+  /* ---------- Settings ---------- */
+  .settings-block {
+    background: var(--panel);
+    color: var(--paper-text);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  .settings-block h3 { font-size: 15px; margin-bottom: 10px; }
+  .settings-block p.help { font-size: 12.5px; color: var(--paper-text-dim); margin: -4px 0 12px; line-height: 1.5; }
+  .field-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .field {
+    display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px;
+  }
+  .field label { font-size: 11.5px; color: var(--paper-text-dim); }
+  .field input, .field select, .field textarea {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid #C7C1AE;
+    border-radius: 2px;
+    background: #F8F6EF;
+    color: var(--paper-text);
+  }
+  .field textarea { resize: vertical; min-height: 50px; }
+  .sync-note { font-size: 12px; color: var(--ink-text-dim); display: flex; align-items: center; gap: 6px; margin-bottom: 16px; }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(10,12,13,0.6);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; z-index: 100;
+  }
+  .modal {
+    background: var(--panel); color: var(--paper-text);
+    border-radius: var(--radius);
+    width: 100%; max-width: 440px;
+    padding: 20px;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal h3 { font-size: 17px; margin-bottom: 3px; }
+  .modal .modal-sub { font-size: 12.5px; color: var(--paper-text-dim); margin-bottom: 16px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+  .toast {
+    position: fixed; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink-2); color: var(--ink-text);
+    border: 1px solid var(--line-soft);
+    padding: 10px 16px; border-radius: var(--radius);
+    font-size: 13px; z-index: 200;
+  }
+
+  /* ---------- Gate screens (login / setup) ---------- */
+  .gate {
+    min-height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .gate-card {
+    background: var(--panel); color: var(--paper-text);
+    border-radius: var(--radius);
+    max-width: 440px; width: 100%;
+    padding: 28px;
+  }
+  .gate-card h2 { font-size: 20px; margin-bottom: 6px; }
+  .gate-card p { font-size: 13.5px; color: var(--paper-text-dim); line-height: 1.55; margin: 0 0 16px; }
+  .gate-card .field { margin-bottom: 10px; }
+  .gate-card ol { font-size: 13px; color: var(--paper-text-dim); line-height: 1.7; padding-left: 20px; margin: 0 0 14px; }
+  .gate-card code { background: #E3DECF; padding: 1px 5px; border-radius: 2px; font-family: 'Space Mono', monospace; font-size: 12px; }
+  .gate-error { color: var(--red); font-size: 13px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================== DATA ============================== */
+
+  var TASKS = [
+    { id: "oil-change", category: "Fluids", name: "Engine oil & filter", mileageInterval: 5000, monthInterval: 6, difficulty: "Easy", time: "30\u201345 min", note: "Drain plug and filter are underneath \u2014 use 0W-20 per the oil cap, about 4.5 qts." },
+    { id: "coolant-flush", category: "Fluids", name: "Coolant flush", mileageInterval: 60000, monthInterval: 60, difficulty: "Moderate", time: "1\u20132 hr", note: "Use Toyota Super Long Life (pink) coolant. Drain the radiator and block, refill, and bleed trapped air." },
+    { id: "brake-fluid", category: "Fluids", name: "Brake fluid flush", mileageInterval: 30000, monthInterval: 24, difficulty: "Moderate", time: "~1 hr", note: "Bleed all four corners with fresh DOT 3; keep an eye on the master cylinder level as you go." },
+    { id: "ps-fluid", category: "Fluids", name: "Power steering fluid", mileageInterval: 30000, monthInterval: 24, difficulty: "Easy", time: "20 min", note: "Check level and color at the reservoir; top off with Toyota PSF if it's low or dark." },
+    { id: "trans-fluid", category: "Fluids", name: "Automatic transmission fluid", mileageInterval: 60000, monthInterval: 48, difficulty: "Moderate", time: "~1 hr", note: "Drain-and-fill with Toyota WS fluid is DIY-friendly; a full flush is best left to a shop." },
+    { id: "washer-fluid", category: "Fluids", name: "Washer fluid top-off", mileageInterval: null, monthInterval: 1, difficulty: "Easy", time: "5 min", note: "Just top off the reservoir under the hood \u2014 check it whenever you check the oil." },
+
+    { id: "engine-air-filter", category: "Filters", name: "Engine air filter", mileageInterval: 20000, monthInterval: 12, difficulty: "Easy", time: "10 min", note: "Unclip the airbox near the battery and swap the panel filter \u2014 no tools needed." },
+    { id: "cabin-air-filter", category: "Filters", name: "Cabin air filter", mileageInterval: 20000, monthInterval: 12, difficulty: "Easy", time: "15 min", note: "Behind the glovebox \u2014 squeeze the side tabs and let the glovebox drop down." },
+    { id: "pcv-valve", category: "Filters", name: "PCV valve", mileageInterval: 60000, monthInterval: null, difficulty: "Easy", time: "15 min", note: "Pull and twist it out near the valve cover. Cheap part, quick swap." },
+
+    { id: "tire-rotation", category: "Brakes & Tires", name: "Tire rotation", mileageInterval: 6000, monthInterval: 6, difficulty: "Moderate", time: "45 min", note: "Jack all four corners (or use ramps) and cross-rotate front to back." },
+    { id: "tire-pressure", category: "Brakes & Tires", name: "Tire pressure check", mileageInterval: 500, monthInterval: 1, difficulty: "Easy", time: "5 min", note: "Check cold \u2014 the door jamb sticker lists the right PSI, usually 32\u201335." },
+    { id: "tire-inspection", category: "Brakes & Tires", name: "Tread & wear inspection", mileageInterval: 5000, monthInterval: 3, difficulty: "Easy", time: "10 min", note: "Penny test the tread depth and look for uneven wear or sidewall cracking." },
+    { id: "brake-inspection", category: "Brakes & Tires", name: "Brake pad & rotor inspection", mileageInterval: 10000, monthInterval: 6, difficulty: "Moderate", time: "30 min", note: "Pull the wheels and eyeball pad thickness (under 3mm means replace soon) and rotor surface." },
+    { id: "lug-torque", category: "Brakes & Tires", name: "Lug nut torque check", mileageInterval: 5000, monthInterval: null, difficulty: "Easy", time: "10 min", note: "Re-torque to 76 lb-ft in a star pattern, especially after a rotation." },
+
+    { id: "battery-clean", category: "Electrical", name: "Battery terminal clean & inspect", mileageInterval: null, monthInterval: 6, difficulty: "Easy", time: "15 min", note: "Baking soda and water on any corrosion; check that cables are tight and unfrayed." },
+    { id: "battery-test", category: "Electrical", name: "Battery load test", mileageInterval: null, monthInterval: 12, difficulty: "Easy", time: "10 min", note: "Most parts stores test batteries free. Resting voltage under ~12.4V means it's aging out." },
+    { id: "bulb-check", category: "Electrical", name: "Headlight / taillight / signal check", mileageInterval: null, monthInterval: 3, difficulty: "Easy", time: "10 min", note: "Walk around with everything on \u2014 have someone confirm brake lights and turn signals." },
+    { id: "wiper-blades", category: "Electrical", name: "Wiper blade replacement", mileageInterval: null, monthInterval: 9, difficulty: "Easy", time: "10 min", note: "Standard 26\"/16\" front pair. Clip-in swap, no tools required." },
+
+    { id: "belt-inspect", category: "Engine & Belts", name: "Serpentine belt inspection", mileageInterval: 30000, monthInterval: 12, difficulty: "Easy", time: "15 min", note: "Look for cracking or glazing on the ribs, and listen for tensioner noise at startup." },
+    { id: "belt-replace", category: "Engine & Belts", name: "Serpentine belt replacement", mileageInterval: 90000, monthInterval: null, difficulty: "Moderate", time: "45 min", note: "Relieve the tensioner with a breaker bar, then route the new belt per the underhood diagram." },
+    { id: "spark-plugs", category: "Engine & Belts", name: "Spark plugs", mileageInterval: 120000, monthInterval: null, difficulty: "Moderate", time: "1\u20132 hr", note: "All four plugs sit right under the coil packs on top of the engine \u2014 straightforward on the 4-cylinder. Use a torque wrench on reinstall (about 13 ft-lb) to avoid stripping the head." },
+    { id: "throttle-clean", category: "Engine & Belts", name: "Throttle body / intake cleaning", mileageInterval: 30000, monthInterval: 12, difficulty: "Easy", time: "20 min", note: "Throttle body cleaner and a rag on the throttle plate; let idle relearn after a restart." },
+
+    { id: "exhaust-check", category: "Chassis & Underbody", name: "Exhaust system inspection", mileageInterval: null, monthInterval: 12, difficulty: "Easy", time: "15 min", note: "Look and listen for leaks; check hanger rubber and rust-through on the pipes and muffler." },
+    { id: "suspension-check", category: "Chassis & Underbody", name: "Suspension & CV boot check", mileageInterval: null, monthInterval: 12, difficulty: "Moderate", time: "20 min", note: "Look for torn CV boots (flung grease), bounce-test each corner, listen for clunks over bumps." },
+    { id: "underbody-check", category: "Chassis & Underbody", name: "Underbody leak & rust check", mileageInterval: null, monthInterval: 6, difficulty: "Easy", time: "10 min", note: "Check where the car normally parks for drips, and scan the frame rails and subframe for rust." }
+  ];
+
+  var CATEGORY_ORDER = ["Fluids", "Filters", "Brakes & Tires", "Electrical", "Engine & Belts", "Chassis & Underbody"];
+
+  /* ============================== STATE ============================== */
+
+  var state = {
+    vehicle: { odometer: null, odometerDate: todayStr() },
+    history: [],
+    customTasks: [],
+    tab: "dashboard",
+    modal: null,
+    toast: null,
+    gate: "loading",     // "loading" | "no-config" | "signed-out" | "signed-in"
+    gateError: null
+  };
+
+  var fbApp = null, fbAuth = null, fbDb = null, uid = null;
+  var unsubscribers = [];
+
+  function todayStr() {
+    var d = new Date();
+    return d.toISOString().slice(0, 10);
+  }
+
+  function allTasks() {
+    return TASKS.concat(state.customTasks);
+  }
+
+  function isConfigured() {
+    return FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey.indexOf("YOUR_") !== 0;
+  }
+
+  /* ============================== FIREBASE ============================== */
+
+  function initFirebase() {
+    if (!isConfigured() || typeof firebase === "undefined") {
+      state.gate = "no-config";
+      render();
+      return;
+    }
+    fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+
+    fbAuth.onAuthStateChanged(function (user) {
+      unsubscribers.forEach(function (u) { u(); });
+      unsubscribers = [];
+      if (user) {
+        uid = user.uid;
+        state.gate = "signed-in";
+        subscribeData();
+      } else {
+        uid = null;
+        state.gate = "signed-out";
+      }
+      render();
+    });
+  }
+
+  function signIn(email, password) {
+    state.gateError = null;
+    fbAuth.signInWithEmailAndPassword(email, password).catch(function (err) {
+      state.gateError = err.message;
+      render();
+    });
+  }
+
+  function signOut() {
+    fbAuth.signOut();
+  }
+
+  function userDoc(path) {
+    return fbDb.collection("users").doc(uid).collection("data").doc(path);
+  }
+  function userCollection(name) {
+    return fbDb.collection("users").doc(uid).collection(name);
+  }
+
+  function subscribeData() {
+    unsubscribers.push(
+      userDoc("vehicle").onSnapshot(function (snap) {
+        if (snap.exists) {
+          var d = snap.data();
+          state.vehicle.odometer = (typeof d.odometer === "number") ? d.odometer : null;
+          state.vehicle.odometerDate = d.odometerDate || state.vehicle.odometerDate;
+        }
+        render();
+      }, function () { showToast("Couldn't load vehicle info."); })
+    );
+
+    unsubscribers.push(
+      userCollection("history").onSnapshot(function (qs) {
+        state.history = qs.docs.map(function (d) {
+          var v = d.data();
+          return { id: d.id, taskId: v.taskId, date: v.date, mileage: v.mileage, notes: v.notes || "" };
+        }).sort(function (a, b) { return b.date.localeCompare(a.date); });
+        render();
+      }, function () { showToast("Couldn't load history."); })
+    );
+
+    unsubscribers.push(
+      userCollection("customTasks").onSnapshot(function (qs) {
+        state.customTasks = qs.docs.map(function (d) {
+          var v = d.data();
+          return {
+            id: d.id, category: v.category, name: v.name,
+            mileageInterval: v.mileageInterval, monthInterval: v.monthInterval,
+            difficulty: v.difficulty || "Moderate", time: v.time || "", note: v.note || "", custom: true
+          };
+        });
+        render();
+      }, function () { showToast("Couldn't load custom tasks."); })
+    );
+  }
+
+  function persistVehicle() {
+    userDoc("vehicle").set({ odometer: state.vehicle.odometer, odometerDate: state.vehicle.odometerDate })
+      .catch(function () { showToast("Couldn't sync odometer \u2014 check your connection."); });
+  }
+
+  function addHistoryEntry(entry) {
+    userCollection("history").add(entry).catch(function () { showToast("Couldn't save that entry."); });
+  }
+
+  function deleteHistoryEntry(id) {
+    userCollection("history").doc(id).delete().catch(function () { showToast("Couldn't delete that entry."); });
+  }
+
+  function addCustomTask(task) {
+    userCollection("customTasks").add(task).catch(function () { showToast("Couldn't save that task."); });
+  }
+
+  function deleteCustomTask(id) {
+    userCollection("customTasks").doc(id).delete().catch(function () { showToast("Couldn't remove that task."); });
+  }
+
+  /* ============================== STATUS LOGIC ============================== */
+
+  function lastEntryFor(taskId) {
+    var entries = state.history.filter(function (h) { return h.taskId === taskId; });
+    if (!entries.length) return null;
+    return entries[0];
+  }
+
+  function addMonths(dateStr, months) {
+    var d = new Date(dateStr + "T00:00:00");
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function computeStatus(task) {
+    var last = lastEntryFor(task.id);
+    if (!last) {
+      return { state: "never", lastDate: null, lastMileage: null, nextDueDate: null, nextDueMileage: null };
+    }
+    var nextDueDate = task.monthInterval ? addMonths(last.date, task.monthInterval) : null;
+    var nextDueMileage = task.mileageInterval ? last.mileage + task.mileageInterval : null;
+
+    var today = todayStr();
+    var odo = state.vehicle.odometer;
+
+    var dateState = "na", mileState = "na";
+    if (nextDueDate) {
+      var daysUntil = (new Date(nextDueDate) - new Date(today)) / 86400000;
+      dateState = daysUntil <= 0 ? "overdue" : (daysUntil <= 21 ? "soon" : "ok");
+    }
+    if (nextDueMileage && typeof odo === "number") {
+      var milesUntil = nextDueMileage - odo;
+      mileState = milesUntil <= 0 ? "overdue" : (milesUntil <= 300 ? "soon" : "ok");
+    }
+
+    var combined;
+    if (dateState === "overdue" || mileState === "overdue") combined = "overdue";
+    else if (dateState === "soon" || mileState === "soon") combined = "soon";
+    else if (dateState === "ok" || mileState === "ok") combined = "ok";
+    else combined = "ok";
+
+    return {
+      state: combined, lastDate: last.date, lastMileage: last.mileage,
+      nextDueDate: nextDueDate, nextDueMileage: nextDueMileage
+    };
+  }
+
+  function intervalLabel(task) {
+    var parts = [];
+    if (task.mileageInterval) parts.push("every " + task.mileageInterval.toLocaleString() + " mi");
+    if (task.monthInterval) {
+      var yrs = task.monthInterval / 12;
+      parts.push("every " + (task.monthInterval % 12 === 0 && yrs >= 1 ? (yrs + (yrs === 1 ? " yr" : " yrs")) : task.monthInterval + " mo"));
+    }
+    return parts.join(" or ") || "as needed";
+  }
+
+  function formatDate(d) {
+    if (!d) return "\u2014";
+    var dt = new Date(d + "T00:00:00");
+    return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  /* ============================== RENDER ============================== */
+
+  var root = document.getElementById("app");
+
+  function showToast(msg) {
+    state.toast = msg;
+    render();
+    setTimeout(function () { state.toast = null; render(); }, 2600);
+  }
+
+  function render() {
+    if (state.gate !== "signed-in") {
+      root.innerHTML = renderGate();
+      wireGateEvents();
+      return;
+    }
+
+    var counts = { overdue: 0, soon: 0, ok: 0, never: 0 };
+    allTasks().forEach(function (t) { counts[computeStatus(t).state]++; });
+
+    root.innerHTML =
+      renderHeader() +
+      '<main>' +
+        (state.tab === "dashboard" ? renderDashboard(counts) : "") +
+        (state.tab === "history" ? renderHistory() : "") +
+        (state.tab === "settings" ? renderSettings() : "") +
+      '</main>' +
+      (state.modal ? renderModal() : "") +
+      (state.toast ? '<div class="toast">' + escapeHtml(state.toast) + '</div>' : "");
+
+    wireEvents();
+  }
+
+  function renderGate() {
+    if (state.gate === "loading") {
+      return '<div class="gate"><div class="gate-card"><h2>Loading\u2026</h2></div></div>';
+    }
+    if (state.gate === "no-config") {
+      return '<div class="gate"><div class="gate-card">' +
+        '<h2>Firebase isn\u2019t configured yet</h2>' +
+        '<p>This copy of the app needs a free Firebase project to store your data and sync it across devices.</p>' +
+        '<ol>' +
+          '<li>Go to <code>console.firebase.google.com</code> and create a project</li>' +
+          '<li>Add a <b>Web app</b> to it and copy the <code>firebaseConfig</code> object</li>' +
+          '<li>Paste those values into the <code>FIREBASE_CONFIG</code> block near the top of this HTML file</li>' +
+          '<li>In the Firebase console, enable <b>Authentication \u2192 Email/Password</b> and add yourself as a user</li>' +
+          '<li>Enable <b>Firestore Database</b> and set its rules so each user can only read/write their own data</li>' +
+        '</ol>' +
+        '<p>Full setup steps and the security rules to paste in are in the message this file came with.</p>' +
+      '</div></div>';
+    }
+    // signed-out
+    return '<div class="gate"><div class="gate-card">' +
+      '<h2>Camry Maintenance Log</h2>' +
+      '<p>Sign in with the account you created in Firebase Authentication.</p>' +
+      (state.gateError ? '<div class="gate-error">' + escapeHtml(state.gateError) + '</div>' : "") +
+      '<div class="field"><label for="gate-email">Email</label><input id="gate-email" type="email" autocomplete="username"></div>' +
+      '<div class="field"><label for="gate-password">Password</label><input id="gate-password" type="password" autocomplete="current-password"></div>' +
+      '<button class="btn" id="gate-signin" style="width:100%;margin-top:6px;">Sign in</button>' +
+    '</div></div>';
+  }
+
+  function wireGateEvents() {
+    var btn = document.getElementById("gate-signin");
+    if (btn) {
+      var doSignIn = function () {
+        var email = document.getElementById("gate-email").value.trim();
+        var password = document.getElementById("gate-password").value;
+        if (!email || !password) { state.gateError = "Enter both email and password."; render(); return; }
+        signIn(email, password);
+      };
+      btn.addEventListener("click", doSignIn);
+      ["gate-email", "gate-password"].forEach(function (id) {
+        document.getElementById(id).addEventListener("keydown", function (e) { if (e.key === "Enter") doSignIn(); });
+      });
+    }
+  }
+
+  function renderHeader() {
+    return '' +
+    '<header class="top">' +
+      '<div class="top-row">' +
+        '<div class="title-block">' +
+          '<div class="kicker">Driveway maintenance</div>' +
+          '<h1>Camry Maintenance Log</h1>' +
+          '<div class="sub">2010 Toyota Camry (4-cyl) &middot; synced to your account <button class="link-sm" id="sign-out-btn">Sign out</button></div>' +
+        '</div>' +
+        '<div class="odo-widget">' +
+          '<span class="lbl">Odo</span>' +
+          '<input id="odo-input" class="odo-digits" inputmode="numeric" pattern="[0-9]*" placeholder="000000" value="' + (state.vehicle.odometer != null ? state.vehicle.odometer : "") + '">' +
+          '<span class="odo-unit">mi</span>' +
+        '</div>' +
+      '</div>' +
+      '<nav class="tabs">' +
+        tabBtn("dashboard", "Dashboard") +
+        tabBtn("history", "History") +
+        tabBtn("settings", "Settings") +
+      '</nav>' +
+    '</header>';
+  }
+
+  function tabBtn(id, label) {
+    return '<button data-tab="' + id + '" class="' + (state.tab === id ? "active" : "") + '">' + label + '</button>';
+  }
+
+  function renderDashboard(counts) {
+    var byCat = {};
+    allTasks().forEach(function (t) {
+      byCat[t.category] = byCat[t.category] || [];
+      byCat[t.category].push(t);
+    });
+
+    var cats = CATEGORY_ORDER.slice();
+    Object.keys(byCat).forEach(function (c) { if (cats.indexOf(c) === -1) cats.push(c); });
+
+    var html = '<div class="status-strip">' +
+      statusChip("overdue", counts.overdue, "overdue") +
+      statusChip("soon", counts.soon, "due soon") +
+      statusChip("ok", counts.ok, "on track") +
+      statusChip("never", counts.never, "not yet logged") +
+    '</div>';
+
+    cats.forEach(function (cat) {
+      var tasks = byCat[cat];
+      if (!tasks || !tasks.length) return;
+      html += '<section class="category">' +
+        '<div class="category-head"><h2>' + escapeHtml(cat) + '</h2><span class="count">' + tasks.length + ' task' + (tasks.length > 1 ? "s" : "") + '</span></div>';
+      tasks.forEach(function (t) { html += renderTaskRow(t); });
+      html += '</section>';
+    });
+
+    return html;
+  }
+
+  function statusChip(cls, count, label) {
+    return '<div class="status-chip"><span class="dot ' + cls + '"></span><b>' + count + '</b>' + escapeHtml(label) + '</div>';
+  }
+
+  function renderTaskRow(task) {
+    var s = computeStatus(task);
+    var statusLabel = { overdue: "Overdue", soon: "Due soon", ok: "On track", never: "Not logged" }[s.state];
+
+    var lastLine = s.lastDate
+      ? 'Last: <b>' + formatDate(s.lastDate) + (s.lastMileage ? " \u00b7 " + s.lastMileage.toLocaleString() + " mi" : "") + '</b>'
+      : 'Never logged';
+    var dueLine = "";
+    if (s.nextDueDate || s.nextDueMileage) {
+      dueLine = '<div>Next: <b>' + (s.nextDueDate ? formatDate(s.nextDueDate) : "") + (s.nextDueDate && s.nextDueMileage ? " or " : "") + (s.nextDueMileage ? s.nextDueMileage.toLocaleString() + " mi" : "") + '</b></div>';
+    }
+
+    return '' +
+    '<div class="task-row">' +
+      '<div class="task-main">' +
+        '<div class="name-line"><span class="name">' + escapeHtml(task.name) + '</span><span class="diff ' + task.difficulty + '">' + task.difficulty + (task.time ? " \u00b7 " + escapeHtml(task.time) : "") + '</span></div>' +
+        '<div class="interval">' + escapeHtml(intervalLabel(task)) + '</div>' +
+        (task.note ? '<div class="diy-note">' + escapeHtml(task.note) + '</div>' : "") +
+      '</div>' +
+      '<div class="task-last">' + lastLine + dueLine + '</div>' +
+      '<div class="status-pill ' + s.state + '">' + statusLabel + '</div>' +
+      '<div class="task-actions">' +
+        '<button class="btn" data-log="' + task.id + '">Log service</button>' +
+        (task.custom ? '<button class="link" data-remove-task="' + task.id + '">Remove task</button>' : "") +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderHistory() {
+    if (!state.history.length) {
+      return '<div class="history-empty">Nothing logged yet. Log a service from the Dashboard and it\u2019ll show up here.</div>';
+    }
+    var html = "";
+    state.history.forEach(function (h) {
+      var task = allTasks().filter(function (t) { return t.id === h.taskId; })[0];
+      html += '<div class="history-entry">' +
+        '<div class="h-main"><span class="h-task">' + escapeHtml(task ? task.name : h.taskId) + '</span>' +
+          '<div class="h-meta">' + formatDate(h.date) + (h.mileage ? " \u00b7 " + h.mileage.toLocaleString() + " mi" : "") + (h.notes ? " \u00b7 " + escapeHtml(h.notes) : "") + '</div>' +
+        '</div>' +
+        '<button class="link" data-delete-history="' + h.id + '">Delete</button>' +
+      '</div>';
+    });
+    return html;
+  }
+
+  function renderSettings() {
+    var html = '<div class="sync-note"><span class="dot ok"></span>Signed in as ' + escapeHtml(fbAuth.currentUser ? fbAuth.currentUser.email : "") + ' \u2014 your log syncs to any device you sign into.</div>';
+
+    html += '<div class="settings-block">' +
+      '<h3>Vehicle</h3>' +
+      '<p class="help">Update your current odometer reading any time \u2014 it drives every due-date calculation on the Dashboard.</p>' +
+      '<div class="field-row">' +
+        '<div class="field"><label for="settings-odo">Current odometer (mi)</label><input id="settings-odo" type="number" min="0" value="' + (state.vehicle.odometer != null ? state.vehicle.odometer : "") + '"></div>' +
+        '<div class="field"><label for="settings-odo-date">As of</label><input id="settings-odo-date" type="date" value="' + state.vehicle.odometerDate + '"></div>' +
+      '</div>' +
+      '<button class="btn" id="save-vehicle">Save</button>' +
+    '</div>';
+
+    html += '<div class="settings-block">' +
+      '<h3>Add a custom task</h3>' +
+      '<p class="help">Track something specific to your car \u2014 a known issue, a part you replaced early, anything not on the default list.</p>' +
+      '<div class="field-row">' +
+        '<div class="field"><label for="ct-name">Task name</label><input id="ct-name" type="text" placeholder="e.g. Radiator cap replacement"></div>' +
+        '<div class="field"><label for="ct-category">Category</label><select id="ct-category">' +
+          CATEGORY_ORDER.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join("") +
+          '<option value="Other">Other</option>' +
+        '</select></div>' +
+      '</div>' +
+      '<div class="field-row">' +
+        '<div class="field"><label for="ct-mileage">Mileage interval (optional)</label><input id="ct-mileage" type="number" min="0" placeholder="e.g. 10000"></div>' +
+        '<div class="field"><label for="ct-months">Month interval (optional)</label><input id="ct-months" type="number" min="0" placeholder="e.g. 12"></div>' +
+        '<div class="field"><label for="ct-difficulty">Difficulty</label><select id="ct-difficulty"><option>Easy</option><option>Moderate</option><option>Advanced</option></select></div>' +
+      '</div>' +
+      '<div class="field-row">' +
+        '<div class="field"><label for="ct-note">Notes (optional)</label><textarea id="ct-note" placeholder="Any how-to notes for future you"></textarea></div>' +
+      '</div>' +
+      '<button class="btn" id="add-custom-task">Add task</button>' +
+    '</div>';
+
+    if (state.customTasks.length) {
+      html += '<div class="settings-block"><h3>Your custom tasks</h3>';
+      state.customTasks.forEach(function (t) {
+        html += '<div class="field-row" style="align-items:center;">' +
+          '<div style="flex:1;font-size:14px;">' + escapeHtml(t.name) + ' <span style="color:var(--paper-text-dim);font-size:12px;">(' + escapeHtml(t.category) + ')</span></div>' +
+          '<button class="link" data-remove-task="' + t.id + '">Remove</button>' +
+        '</div>';
+      });
+      html += '</div>';
+    }
+
+    html += '<div class="settings-block">' +
+      '<h3>Backup</h3>' +
+      '<p class="help">Export a copy of your full log as a JSON file whenever you want a backup.</p>' +
+      '<button class="btn ghost" id="export-data">Export backup (.json)</button>' +
+    '</div>';
+
+    return html;
+  }
+
+  function renderModal() {
+    var task = allTasks().filter(function (t) { return t.id === state.modal.taskId; })[0];
+    if (!task) return "";
+    return '' +
+    '<div class="modal-backdrop" id="modal-backdrop">' +
+      '<div class="modal">' +
+        '<h3>Log: ' + escapeHtml(task.name) + '</h3>' +
+        '<div class="modal-sub">' + escapeHtml(intervalLabel(task)) + '</div>' +
+        '<div class="field-row">' +
+          '<div class="field"><label for="log-date">Date completed</label><input id="log-date" type="date" value="' + todayStr() + '"></div>' +
+          '<div class="field"><label for="log-mileage">Odometer at the time</label><input id="log-mileage" type="number" min="0" value="' + (state.vehicle.odometer != null ? state.vehicle.odometer : "") + '"></div>' +
+        '</div>' +
+        '<div class="field-row"><div class="field"><label for="log-notes">Notes (optional)</label><textarea id="log-notes" placeholder="Parts used, torque specs, anything for next time"></textarea></div></div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn ghost" id="modal-cancel">Cancel</button>' +
+          '<button class="btn" id="modal-save">Save entry</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return "";
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  /* ============================== EVENTS ============================== */
+
+  function wireEvents() {
+    var signOutBtn = document.getElementById("sign-out-btn");
+    if (signOutBtn) signOutBtn.addEventListener("click", signOut);
+
+    root.querySelectorAll("[data-tab]").forEach(function (b) {
+      b.addEventListener("click", function () { state.tab = b.getAttribute("data-tab"); render(); });
+    });
+
+    var odoInput = document.getElementById("odo-input");
+    if (odoInput) {
+      odoInput.addEventListener("change", function () {
+        var v = parseInt(odoInput.value, 10);
+        state.vehicle.odometer = isNaN(v) ? null : v;
+        state.vehicle.odometerDate = todayStr();
+        persistVehicle();
+        render();
+      });
+    }
+
+    root.querySelectorAll("[data-log]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.modal = { taskId: b.getAttribute("data-log") };
+        render();
+      });
+    });
+
+    root.querySelectorAll("[data-remove-task]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (confirm("Remove this custom task? Its history entries will stay in your log.")) {
+          deleteCustomTask(b.getAttribute("data-remove-task"));
+        }
+      });
+    });
+
+    root.querySelectorAll("[data-delete-history]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (confirm("Delete this log entry?")) deleteHistoryEntry(b.getAttribute("data-delete-history"));
+      });
+    });
+
+    var backdrop = document.getElementById("modal-backdrop");
+    if (backdrop) {
+      backdrop.addEventListener("click", function (e) { if (e.target === backdrop) { state.modal = null; render(); } });
+    }
+    var cancelBtn = document.getElementById("modal-cancel");
+    if (cancelBtn) cancelBtn.addEventListener("click", function () { state.modal = null; render(); });
+    var saveBtn = document.getElementById("modal-save");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", function () {
+        var date = document.getElementById("log-date").value || todayStr();
+        var mileage = parseInt(document.getElementById("log-mileage").value, 10);
+        var notes = document.getElementById("log-notes").value.trim();
+        var taskId = state.modal.taskId;
+
+        addHistoryEntry({ taskId: taskId, date: date, mileage: isNaN(mileage) ? null : mileage, notes: notes });
+
+        if (!isNaN(mileage) && (state.vehicle.odometer == null || mileage > state.vehicle.odometer)) {
+          state.vehicle.odometer = mileage;
+          state.vehicle.odometerDate = date;
+          persistVehicle();
+        }
+        state.modal = null;
+        showToast("Logged.");
+      });
+    }
+
+    var saveVehicleBtn = document.getElementById("save-vehicle");
+    if (saveVehicleBtn) {
+      saveVehicleBtn.addEventListener("click", function () {
+        var v = parseInt(document.getElementById("settings-odo").value, 10);
+        var d = document.getElementById("settings-odo-date").value || todayStr();
+        state.vehicle.odometer = isNaN(v) ? null : v;
+        state.vehicle.odometerDate = d;
+        persistVehicle();
+        showToast("Vehicle info saved.");
+      });
+    }
+
+    var addTaskBtn = document.getElementById("add-custom-task");
+    if (addTaskBtn) {
+      addTaskBtn.addEventListener("click", function () {
+        var name = document.getElementById("ct-name").value.trim();
+        if (!name) { showToast("Give the task a name first."); return; }
+        var category = document.getElementById("ct-category").value;
+        var mi = parseInt(document.getElementById("ct-mileage").value, 10);
+        var mo = parseInt(document.getElementById("ct-months").value, 10);
+        var difficulty = document.getElementById("ct-difficulty").value;
+        var note = document.getElementById("ct-note").value.trim();
+        addCustomTask({
+          name: name, category: category,
+          mileageInterval: isNaN(mi) ? null : mi,
+          monthInterval: isNaN(mo) ? null : mo,
+          difficulty: difficulty, time: "", note: note
+        });
+        showToast("Task added.");
+      });
+    }
+
+    var exportBtn = document.getElementById("export-data");
+    if (exportBtn) {
+      exportBtn.addEventListener("click", function () {
+        var payload = JSON.stringify({ vehicle: state.vehicle, history: state.history, customTasks: state.customTasks }, null, 2);
+        try {
+          var blob = new Blob([payload], { type: "application/json" });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url; a.download = "camry-maintenance-backup.json";
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (e) { showToast("Couldn't export right now."); }
+      });
+    }
+  }
+
+  /* ============================== INIT ============================== */
+
+  render();
+  initFirebase();
+})();
+</script>
+</body>
+</html>
